@@ -25,28 +25,26 @@ int CheckSector(unsigned char* buffer) {
 	return res;
 }
 
-//ÊäÈëÎÄ¼şÖ¸Õë£¬»º³åÇø»ùµØÖ·£¬Êä³öÂ·¾¶
-void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath) {
-	int curSector = 0;//µ±Ç°¶ÁÈ¡ÉÈÇøºÅ
-	int State = 0;//0£º²»ÊÇhtml¶ÎÇÒ²»º¬Î´Íê³ÉÎÄ¼ş£»1£ºÊÇhtml¶Î
-	int StartLoc = 0, EndLoc = 0;//html¶ÎÔÚ»º³åÇøÖĞµÄÆğÊ¼ºÍ½áÊø
-	int curLoc = 0;//Ö¸Ïò»º³åÇøÖĞµ±Ç°ÓĞĞ§htmlÎÄ¼şµÄ×îÄ©¶Ë
-	int cnt = 0;//ÕÒµ½µÄÎÄ¼ş¸öÊı
-	int cntWind = 0, cntEnd = 0;//³öÏÖÎÄ¼ş²øÈÆÊ±£¬²øÈÆ¸öÊıºÍ½áÊøµÄÎÄ¼ş¸öÊı
+//è¾“å…¥æ–‡ä»¶æŒ‡é’ˆï¼Œç¼“å†²åŒºåŸºåœ°å€ï¼Œè¾“å‡ºè·¯å¾„
+void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath,set<int> &usedSector) {
+	int curSector = 0;//å½“å‰è¯»å–æ‰‡åŒºå·
+	int State = 0;//0ï¼šä¸æ˜¯htmlæ®µä¸”ä¸å«æœªå®Œæˆæ–‡ä»¶ï¼›1ï¼šæ˜¯htmlæ®µ
+	int StartLoc = 0, EndLoc = 0;//htmlæ®µåœ¨ç¼“å†²åŒºä¸­çš„èµ·å§‹å’Œç»“æŸ
+	int curLoc = -1;//æŒ‡å‘ç¼“å†²åŒºä¸­å½“å‰æœ‰æ•ˆhtmlæ–‡ä»¶çš„æœ€æœ«ç«¯
+	int cnt = 0;//æ‰¾åˆ°çš„æ–‡ä»¶ä¸ªæ•°
+	int cntWind = 0, cntEnd = 0;//å‡ºç°æ–‡ä»¶ç¼ ç»•æ—¶ï¼Œç¼ ç»•ä¸ªæ•°å’Œç»“æŸçš„æ–‡ä»¶ä¸ªæ•°
 	char FileName[200];
 	fseek(fp, 0, SEEK_END);
 	int SectorNum = ftell(fp) / SECTOR_SIZE;
 	fseek(fp, 0, SEEK_SET);
 
-	InitTextTable();
 	for (curSector = 0; curSector < SectorNum; curSector++) {
 		if (State == 0) {
-			curLoc = -1;
 			ReadSector(fp, curSector, buffer);
 			for (int i = 0; i < SECTOR_SIZE - 10; i++) {
 				if ((char)buffer[i] == '<') {
 					if (!_strnicmp((const char*)(buffer + i + 1), "html", 4)) {
-						printf_s("%d ", curSector);
+						curLoc = -1;
 						State = 1;
 						StartLoc = 0;
 						cntWind = 0;
@@ -60,6 +58,7 @@ void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 		else if (State == 1) {
 			ReadSector(fp, curSector, buffer + curLoc + 1);
 			if (CheckSector(buffer + curLoc + 1) == 1) {
+				usedSector.insert(curSector);
 				for (int i = curLoc + 1; i < curLoc + 1 + SECTOR_SIZE - 10; i++) {
 					if ((char)buffer[i] == '<') {
 						if (!_strnicmp((const char*)(buffer + i + 1), "html", 4)) {
@@ -84,6 +83,7 @@ void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 				}
 				if (f == 1) {
 					cntEnd++;
+					usedSector.insert(curSector);
 					if (cntWind == cntEnd) {
 						cnt++;
 						sprintf_s(FileName, "%s\\%d", OutputPath, cnt);
@@ -96,7 +96,6 @@ void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 						while (buffer[EndLoc + 1] == '\n') {
 							EndLoc++;
 						}
-						printf_s("%d\n", curSector);
 						OutputFile(FileName, buffer, StartLoc, EndLoc - StartLoc + 1);
 						State = 0;
 					}
@@ -107,8 +106,81 @@ void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 			}
 		}
 	}
-	printf_s("ÒÑ³É¹¦»Ö¸´%d¸ö¿ÉÄÜµÄhtmlÎÄ¼ş\n", cnt);
+	printf_s("å·²æˆåŠŸæ¢å¤%dä¸ªå¯èƒ½çš„htmlæ–‡ä»¶\n", cnt);
 }
 
-void FindText(FILE* fp, unsigned char* buffer) {
+void FindText(FILE* fp, unsigned char* buffer, const char* OutputPath) {
+	set<int> usedSector;
+	InitTextTable();
+	FindHtml(fp, buffer, OutputPath, usedSector);
+
+	int curSector = 0;//å½“å‰è¯»å–æ‰‡åŒºå·
+	int State = 0;//0ï¼šä¸æ˜¯txtæ®µä¸”ä¸å«æœªå®Œæˆæ–‡ä»¶ï¼›1ï¼šæ˜¯txtæ®µ
+	int StartLoc = 0, EndLoc = 0;//txtæ®µåœ¨ç¼“å†²åŒºä¸­çš„èµ·å§‹å’Œç»“æŸ
+	int curLoc = -1;//æŒ‡å‘ç¼“å†²åŒºä¸­å½“å‰æœ‰æ•ˆtxtæ–‡ä»¶çš„æœ€æœ«ç«¯
+	int cnt = 0;//æ‰¾åˆ°çš„æ–‡ä»¶ä¸ªæ•°
+	char FileName[200];
+	fseek(fp, 0, SEEK_END);
+	int SectorNum = ftell(fp) / SECTOR_SIZE;
+	fseek(fp, 0, SEEK_SET);
+
+	for (curSector = 0; curSector < SectorNum; curSector++) {
+		if (usedSector.find(curSector) != usedSector.end()) {
+			continue;
+		}
+		ReadSector(fp, curSector, buffer + curLoc + 1);
+		int ck = CheckSector(buffer + curLoc + 1);
+		int tmpcnt = 0;
+		if (ck != 1) {
+			for (int i = curLoc + 1; i < curLoc + 1 + SECTOR_SIZE; i++) {
+				tmpcnt += (TextTable[buffer[i]] == 2);
+				if (tmpcnt > 50) break;
+			}
+		}
+		if (State == 0) {
+			curLoc = -1;
+			if (tmpcnt > 50) continue;
+			else {
+				curLoc += SECTOR_SIZE;
+				StartLoc = 0;
+				State = 1;
+			}
+		}
+		else if (State == 1) {
+			if (ck == 1) {
+				curLoc += SECTOR_SIZE;
+			}
+			else {
+				int WarningLevel = 1;
+				int fail = 0;
+				int LastLowLevel = curLoc;
+				for (int i = curLoc + 1; i < curLoc + 1 + SECTOR_SIZE; i++) {
+					if (TextTable[buffer[i]] == 1) {
+						WarningLevel--;
+						if (!WarningLevel)WarningLevel = 1;
+					}
+					else {
+						WarningLevel *= 2;
+					}
+					if (WarningLevel == 1)LastLowLevel = i;
+					if (WarningLevel > 10) {
+						fail = 1;
+						break;
+					}
+				}
+				if (fail) {
+					State = 0;
+					curLoc = -1;
+					EndLoc = max(StartLoc, LastLowLevel);
+					cnt++;
+					sprintf_s(FileName, "%s\\%d.txt", OutputPath, cnt);
+					OutputFile(FileName, buffer, StartLoc, EndLoc - StartLoc + 1);
+				}
+				else {
+					curLoc += SECTOR_SIZE;
+				}
+			}
+		}
+	}
+	printf_s("å·²æˆåŠŸæ¢å¤%dä¸ªå¯èƒ½çš„txtæ–‡ä»¶\n", cnt);
 }
