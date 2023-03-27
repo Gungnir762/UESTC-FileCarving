@@ -41,10 +41,11 @@ int ReadFileUntil(const unsigned char* keyword,int len, FILE* fp, unsigned char*
 	int cnt = 0;//读取字节数
 	int flag = 0;//是否找到关键词标识
 	while (true){
-		buffer[cnt] = fgetc(fp);
-		if (buffer[cnt] == EOF) {
+		int tmp = fgetc(fp);
+		if (tmp == EOF) {
 			return -1;
 		}
+		buffer[cnt] = tmp;
 		if (cnt + 1 >= len) for (int i = 0; i < len; i++) {
 			if (buffer[cnt - i] != keyword[len - i]) {
 				break;
