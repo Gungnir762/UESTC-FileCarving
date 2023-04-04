@@ -26,7 +26,7 @@ int CheckSector(unsigned char* buffer) {
 }
 
 //输入文件指针，缓冲区基地址，输出路径
-void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath,set<int> &usedSector) {
+void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath, set<int>& usedSector) {
 	int curSector = 0;//当前读取扇区号
 	int State = 0;//0：不是html段且不含未完成文件；1：是html段
 	int StartLoc = 0, EndLoc = 0;//html段在缓冲区中的起始和结束
@@ -35,6 +35,7 @@ void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath,set<int> &
 	int cntWind = 0, cntEnd = 0;//出现文件缠绕时，缠绕个数和结束的文件个数
 	char FileName[200];
 	int SectorNum = CalculateFileSize(fp) / SECTOR_SIZE;
+	int StartSector;//输出文件用
 
 	for (curSector = 0; curSector < SectorNum; curSector++) {
 		if (State == 0) {
@@ -42,6 +43,7 @@ void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath,set<int> &
 			for (int i = 0; i < SECTOR_SIZE - 10; i++) {
 				if ((char)buffer[i] == '<') {
 					if (!_strnicmp((const char*)(buffer + i + 1), "html", 4)) {
+						StartSector = curSector;
 						curLoc = -1;
 						State = 1;
 						StartLoc = 0;
@@ -84,7 +86,7 @@ void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath,set<int> &
 					usedSector.insert(curSector);
 					if (cntWind == cntEnd) {
 						cnt++;
-						sprintf_s(FileName, "%s\\%d", OutputPath, cnt);
+						sprintf_s(FileName, "%s\\%08d", OutputPath, StartSector);
 						if (cntWind > 1) {
 							char tmp[20];
 							sprintf_s(tmp, "_%dfiles", cntWind);
@@ -119,6 +121,7 @@ void FindText(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 	int cnt = 0;//找到的文件个数
 	char FileName[200];
 	int SectorNum = CalculateFileSize(fp) / SECTOR_SIZE;
+	int StartSector;//输出文件用
 
 	for (curSector = 0; curSector < SectorNum; curSector++) {
 		if (usedSector.find(curSector) != usedSector.end()) {
@@ -137,6 +140,7 @@ void FindText(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 			curLoc = -1;
 			if (tmpcnt > 50) continue;
 			else {
+				StartSector = curSector;
 				curLoc += SECTOR_SIZE;
 				StartLoc = 0;
 				State = 1;
@@ -169,7 +173,7 @@ void FindText(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 					curLoc = -1;
 					EndLoc = max(StartLoc, LastLowLevel);
 					cnt++;
-					sprintf_s(FileName, "%s\\%d.txt", OutputPath, cnt);
+					sprintf_s(FileName, "%s\\%08d.txt", OutputPath, StartSector);
 					OutputFile(FileName, buffer, StartLoc, EndLoc - StartLoc + 1);
 				}
 				else {
