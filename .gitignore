@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+/.vs
+/x64/Debug
+/数据恢复挑战课.sln
+/数据恢复挑战课.vcxproj.user
