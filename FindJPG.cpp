@@ -2,21 +2,27 @@
 #include"FindJPG.h"
 #include"BasicFunction.h"
 
-bool JFIF_found(unsigned char* buffer)
+//从buffer中的offset开始读取2字节数据
+uint32_t read2Bytes(unsigned char* buffer, unsigned offset)
 {
-	if (buffer[0] == 0xFF && buffer[1] == 0xD8) {//SOI
-		if (buffer[2] == 0xFF && buffer[3] == 0xE0)//APP0
-			return true;
-	}
+	uint32_t value = 0;
+	value |= buffer[offset] << 8;
+	value |= buffer[offset + 1];
+	return value;
+}
+
+
+bool JFIF_head_found(unsigned char* buffer)
+{
+	if (read2Bytes(buffer, 0) == 0xFFD8 && read2Bytes(buffer, 2) == 0xFFE0)
+		return true;
 	return false;
 }
 
-bool EXIF_found(unsigned char* buffer)
+bool EXIF_head_found(unsigned char* buffer)
 {
-	if (buffer[0] == 0xFF && buffer[1] == 0xD8) {//SOI
-		if (buffer[2] == 0xFF && buffer[3] == 0xE1)//APP1
-			return true;
-	}
+	if (read2Bytes(buffer, 0) == 0xFFD8 && read2Bytes(buffer, 2) == 0xFFE1)
+		return true;
 	return false;
 }
 
@@ -29,12 +35,10 @@ bool JPG_EndFound(FILE* fp, unsigned int sector_begin, unsigned int sector_end, 
 	{
 		for (unsigned int i = sector_begin; i < sector_end; i++)
 		{
-			/*if (i == 4428)
-				printf_s(" ");*/
 			ReadSector(fp, i, tmp);
 			int buffer_end = strlen((char*)buffer);
 			for (unsigned int j = 0; j < SECTOR_SIZE; ++j) {
-				if (tmp[j] == 0xFF && tmp[j + 1] == 0xD9)
+				if (read2Bytes(tmp, j) == 0xD9)
 				{
 					printf_s("end at sector: %d\n", i);
 					memcpy(&buffer[buffer_end], tmp, j + 1);
@@ -65,7 +69,7 @@ void FindJPG(FILE* fp, unsigned char* buffer, const char* OutputPath)
 	fseek(fp, 0, SEEK_SET);
 	for (curSector = 0; curSector < SectorNum; curSector++) {
 		ReadSector(fp, curSector, buffer);
-		if (JFIF_found(buffer)) {
+		if (JFIF_head_found(buffer)) {
 			printf_s("JFIF begin at sector: %d\n", curSector);
 			if (JPG_EndFound(fp, curSector, SectorNum, buffer))
 			{
@@ -77,7 +81,7 @@ void FindJPG(FILE* fp, unsigned char* buffer, const char* OutputPath)
 			else
 				printf_s("未找到文件尾\n");
 		}
-		else if (EXIF_found(buffer)) {
+		else if (EXIF_head_found(buffer)) {
 			printf_s("EXIF begin at sector:%d\n", curSector);
 
 		}
