@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include <stdio.h>
 #include <string.h>
+#include <direct.h>
+#include <io.h>
 #define SECTOR_SIZE 512
 #define MAX_SIZE 50*1024*1024
 
@@ -25,3 +27,7 @@ int ReadFileUntil(const unsigned char* keyword, int len, FILE* fp, unsigned char
 //将小端存储的字节码转换为无符号整数
 //输入缓冲区位置，字节长度，字节长度不可大于4
 unsigned int Bytes2Int(const unsigned char* buffer, int len);
+
+//创建文件夹
+//返回0：成功；返回1：已存在；返回-1：失败
+int CreateFolder(const char* FolderPath);

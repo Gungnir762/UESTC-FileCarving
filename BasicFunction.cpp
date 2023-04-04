@@ -1,6 +1,6 @@
 #include"BasicFunction.h"
 
-void ReadSectorError(unsigned char* buffer) 
+void ReadSectorError(unsigned char* buffer)
 {
 	for (int i = 0; i < SECTOR_SIZE; i++) {
 		buffer[i] = 0x0F;
@@ -30,7 +30,7 @@ void OutputFile(const char* filename, unsigned char* buffer, unsigned int begin,
 		printf_s("溢出\n");
 		return;
 	}
-	if (fopen_s(&fp,filename, "wb+")) {
+	if (fopen_s(&fp, filename, "wb+")) {
 		printf_s("未成功创建文件\n");
 		return;
 	}
@@ -54,11 +54,11 @@ int CalculateFileSize(FILE* fp)
 	return res;
 }
 
-int ReadFileUntil(const unsigned char* keyword,int len, FILE* fp, unsigned char* buffer)
+int ReadFileUntil(const unsigned char* keyword, int len, FILE* fp, unsigned char* buffer)
 {
 	int cnt = 0;//读取字节数
 	int flag = 0;//是否找到关键词标识
-	while (true){
+	while (true) {
 		int tmp = fgetc(fp);
 		if (tmp == EOF) {
 			return -1;
@@ -86,6 +86,18 @@ unsigned int Bytes2Int(const unsigned char* buffer, int len)
 	unsigned int res = 0;
 	for (int i = 0; i < len; i++) {
 		res += ((unsigned int)buffer[i] << (8 * i));
+	}
+	return res;
+}
+
+int CreateFolder(const char* FolderPath)
+{
+	int res;
+	if (_access(FolderPath, 0) != 0) {
+		res = _mkdir(FolderPath);
+	}
+	else {
+		res = 1;
 	}
 	return res;
 }
