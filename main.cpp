@@ -1,34 +1,33 @@
-﻿#include"sector.h"
-#include<iostream>
-#include"md5.h"
+﻿// main.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+//
 
-void printMD5(const string& message) {
-	cout << "md5(\"" << message << "\") = "
-		<< MD5(message).toStr() << endl;
-}
+#include <iostream>
+#include "BasicFunction.h"
+#include "FindText.h"
+#include"FindJPG.h"
+#include "md5.h"
+
+
+unsigned char buffer[MAX_SIZE];
 
 int main()
 {
-	//unsigned char* buffer = (unsigned char*)malloc(1024 * SECTOR_SIZE);
-	//FILE* file = NULL;
-	//if (file)
-	//{
-	//	fopen_s(&file, "test.img", "rb");
-	//	ReadSector(file, 0, buffer);
-	//	BGC(file, 0, buffer);
-	//	//OutputFile("test.txt", buffer, 0x1C6, 0x1C6 + 0x1C);
-	//	fclose(file);
-	//}
-	//free(buffer);
-
-
-
-	printMD5("");
-	printMD5("a");
-	printMD5("abc");
-	printMD5("message digest");
-	printMD5("abcdefghijklmnopqrstuvwxyz");
-	printMD5("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
-	
-	return 0;
+	char fileName[] = "E:\\1_Temp\\challenges\\dfrws-2006-challenge.raw";
+	char savePath[] = "E:\\1_Temp\\challenges\\MyOutput";
+	FILE* fp;
+	fopen_s(&fp, fileName, "rb");
+	//FindText(fp, buffer, savePath);
+	FindJPG(fp, buffer, savePath);
+	printf_s("执行完成！");
 }
+
+// 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
+// 调试程序: F5 或调试 >“开始调试”菜单
+
+// 入门使用技巧: 
+//   1. 使用解决方案资源管理器窗口添加/管理文件
+//   2. 使用团队资源管理器窗口连接到源代码管理
+//   3. 使用输出窗口查看生成输出和其他消息
+//   4. 使用错误列表窗口查看错误
+//   5. 转到“项目”>“添加新项”以创建新的代码文件，或转到“项目”>“添加现有项”以将现有代码文件添加到项目
+//   6. 将来，若要再次打开此项目，请转到“文件”>“打开”>“项目”并选择 .sln 文件
