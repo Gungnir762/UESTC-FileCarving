@@ -17,8 +17,9 @@ int main()
 	FILE* fp;
 	fopen_s(&fp, fileName, "rb");
 	//FindText(fp, buffer, savePath);
-	FindJPG(fp, buffer, savePath);
+	rebuild_JPG(fp, buffer, savePath);
 	printf_s("执行完成！");
+	return 0;
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单

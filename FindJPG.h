@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include<stdio.h>
-#include<string>
+#include<iostream>
 
 using namespace std;
 
@@ -19,6 +19,4 @@ using namespace std;
 
 typedef uint16_t WORD;
 
-void FindJPG(FILE* fp, unsigned char* buffer, const char* OutputPath);
-
-bool JPG_EndFound(FILE* file, unsigned int sector_begin, unsigned int sector_end, unsigned char* buffer);
+void rebuild_JPG(FILE* fp, unsigned char* buffer, const char* OutputPath);
