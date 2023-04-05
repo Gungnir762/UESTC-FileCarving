@@ -2,6 +2,7 @@
 #include<set>
 #include"FindJPG.h"
 #include"BasicFunction.h"
+#include"huffmanTree.h"
 
 //从buffer中的offset开始读取2字节数据
 uint16_t read2Bytes(unsigned char* buffer, unsigned offset)
@@ -48,7 +49,7 @@ set<string> get_huffmanCode_set(FILE* fp, unsigned int sector_begin, unsigned in
 	static unsigned char* tmp = (unsigned char*)malloc(SECTOR_SIZE * sizeof(unsigned char));
 	set<string> huffman_code_set;
 	*max_huffman_code_len = 0;
-	for (unsigned int begin = sector_begin; begin < sector_begin + 2; begin++)//DHT可能在文件头之后1个扇区
+	for (unsigned int begin = sector_begin; begin < sector_begin + 5; begin++)//DHT可能在文件头之后1个扇区
 	{
 		ReadSector(fp, begin, tmp);
 		for (int offset = 0; offset < SECTOR_SIZE - 1; offset++)
@@ -136,7 +137,7 @@ bool is_jpg_sector(unsigned char* buffer, unsigned int offset, set<uint16_t> huf
 	return true;
 }
 //从sector_begin开始一直往sector_end找,直到找到第一个0xFFD9，返回其所在的扇区号
-int get_JPG_end(FILE* fp, set<uint16_t> huffman_look_up_table, unsigned int sector_begin, unsigned int sector_end)
+int get_JPG_end(FILE* fp, set<string> huffman_code_set, unsigned int sector_begin, unsigned int sector_end)
 {
 	static unsigned char* temp = (unsigned char*)malloc(SECTOR_SIZE * sizeof(unsigned char));
 
@@ -147,7 +148,8 @@ int get_JPG_end(FILE* fp, set<uint16_t> huffman_look_up_table, unsigned int sect
 
 			if (read2Bytes(temp, offset) == EOI)
 			{
-				if (is_jpg_sector(temp, offset, huffman_look_up_table))
+				//if (is_jpg_sector(temp, offset, huffman_look_up_table))
+				if (is_jpg_sector(temp, huffman_code_set) == 1)
 				{
 					printf_s("end at sector: %d\n", i);
 					return i;
@@ -177,14 +179,14 @@ void rebuild_JPG(FILE* fp, unsigned char* buffer, const char* output_path)
 			huffman_code_set = get_huffmanCode_set(fp, curSector, &max_huffman_code_len);
 			huffman_look_up_table = create_huffman_lookup_table(huffman_code_set);
 
-			for (auto it = huffman_look_up_table.begin(); it != huffman_look_up_table.end(); it++)
+			/*for (auto it = huffman_look_up_table.begin(); it != huffman_look_up_table.end(); it++)
 			{
 				cout << std::hex << *it << endl;
 			}
 
-			printf("哈夫曼编码的最大长度为：%d\n", max_huffman_code_len);
+			printf("哈夫曼编码的最大长度为：%d\n", max_huffman_code_len);*/
 
-			int sector_end = get_JPG_end(fp, huffman_look_up_table, curSector, SectorNum);
+			int sector_end = get_JPG_end(fp, huffman_code_set, curSector, SectorNum);
 			if (sector_end == -1)
 				printf_s("未找到文件尾\n");
 		}
