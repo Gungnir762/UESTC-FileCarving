@@ -94,11 +94,11 @@ int is_jpg_sector(unsigned char* buffer, set<string>huffman_code_set) {
 	string str;
 	for (int i = 0; i < SECTOR_SIZE; i++) {
 		if (warning) {
-			if (buffer[i] == '\x00') {//读到FF后读到00，则丢弃00
+			if (buffer[i] == 0x00) {//读到FF后读到00，则丢弃00
 				warning = 0;
-				append_byte(str, (unsigned char)'\xFF');
+				append_byte(str, (unsigned char)0xFF);
 			}
-			else if (buffer[i] == '\xD9') {//读到FF后读到D9，则认为jpg结束
+			else if (buffer[i] == 0xD9) {//读到FF后读到D9，则认为jpg结束
 				f = 1;
 				for (int j = 0; j < 7; j++) {
 					if (!str.empty()) str.pop_back();//FFD9要与字节对齐，则前面至多有7位不在huffman序列内
@@ -110,7 +110,7 @@ int is_jpg_sector(unsigned char* buffer, set<string>huffman_code_set) {
 			}
 		}
 		else {
-			if (buffer[i] == '\xFF') {
+			if (buffer[i] == 0xFF) {
 				warning = 1;
 				continue;
 			}

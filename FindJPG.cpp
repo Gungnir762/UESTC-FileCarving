@@ -28,7 +28,7 @@ bool EXIF_head_found(unsigned char* buffer)
 	return false;
 }
 
-static const char* to_binary_str(int huffman_code, int n_bits, char buf[64]) {
+static const char* huffman2binary_str(int huffman_code, int n_bits, char buf[64]) {
 	int mask = 1 << (n_bits - 1);
 	for (int i = 0; i < n_bits; i++) {
 		if (huffman_code & mask) {
@@ -70,8 +70,8 @@ set<string> get_huffmanCode_set(FILE* fp, unsigned int sector_begin, unsigned in
 						if (n_bits > *max_huffman_code_len)
 							*max_huffman_code_len = n_bits;
 
-						printf("0x%0.2x | %s\n", symbol, to_binary_str(huffman_code, n_bits, buf));
-						huffman_code_set.insert(to_binary_str(huffman_code, n_bits, buf));
+						printf("0x%0.2x | %s\n", symbol, huffman2binary_str(huffman_code, n_bits, buf));
+						huffman_code_set.insert(huffman2binary_str(huffman_code, n_bits, buf));
 
 						huffman_code++;
 						symbols++;
@@ -121,21 +121,21 @@ bool is_in_set(const std::set<uint16_t>& set, uint16_t num)
 {
 	return set.find(num) != set.end();
 }
-
-bool is_jpg_sector(unsigned char* buffer, unsigned int offset, set<uint16_t> huffman_look_up_table)
-{
-	int warning_level = 1;//判断是不是属于jpg的块，大于10则退出
-	for (unsigned int offset_test = 0; offset_test < offset; ++offset_test)
-	{
-		if (is_in_set(huffman_look_up_table, read2Bytes(buffer, offset_test)) && warning_level != 1)
-			warning_level--;
-		else
-			warning_level *= 2;
-		if (warning_level > 10)
-			return false;
-	}
-	return true;
-}
+//
+//bool is_jpg_sector(unsigned char* buffer, unsigned int offset, set<uint16_t> huffman_look_up_table)
+//{
+//	int warning_level = 1;//判断是不是属于jpg的块，大于10则退出
+//	for (unsigned int offset_test = 0; offset_test < offset; ++offset_test)
+//	{
+//		if (is_in_set(huffman_look_up_table, read2Bytes(buffer, offset_test)) && warning_level != 1)
+//			warning_level--;
+//		else
+//			warning_level *= 2;
+//		if (warning_level > 10)
+//			return false;
+//	}
+//	return true;
+//}
 //从sector_begin开始一直往sector_end找,直到找到第一个0xFFD9，返回其所在的扇区号
 int get_JPG_end(FILE* fp, set<string> huffman_code_set, unsigned int sector_begin, unsigned int sector_end)
 {
@@ -161,6 +161,13 @@ int get_JPG_end(FILE* fp, set<string> huffman_code_set, unsigned int sector_begi
 	return -1;
 }
 
+int jump_to_sos(FILE* fp, unsigned int curSector, unsigned int SectorNum)
+{
+	int sos_begin_sector = 0;
+
+	return sos_begin_sector;
+}
+
 void rebuild_JPG(FILE* fp, unsigned char* buffer, const char* output_path)
 {
 	unsigned int curSector = 0;//当前读取扇区号
@@ -177,8 +184,8 @@ void rebuild_JPG(FILE* fp, unsigned char* buffer, const char* output_path)
 			printf_s("JFIF begin at sector: %d\n", curSector);
 			unsigned int max_huffman_code_len = 0;
 			huffman_code_set = get_huffmanCode_set(fp, curSector, &max_huffman_code_len);
-			huffman_look_up_table = create_huffman_lookup_table(huffman_code_set);
-
+			//从SOI之后开始，找到压缩数据的开头，避免FFD9的误伤
+			int sos_begin = jump_to_sos(fp, curSector, SectorNum);
 			/*for (auto it = huffman_look_up_table.begin(); it != huffman_look_up_table.end(); it++)
 			{
 				cout << std::hex << *it << endl;
