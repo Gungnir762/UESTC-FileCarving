@@ -3,6 +3,7 @@
 int TextTable[256] = { 0 };
 
 void InitTextTable() {
+	//将所有非ASCII码字符标记为2，ASCII码（以及一些常用的非ASCII码）标记为1
 	for (int i = 0; i < 256; i++) {
 		TextTable[i] = 2;
 	}
@@ -17,6 +18,7 @@ void InitTextTable() {
 	TextTable[174] = 1;
 }
 
+//检查某个扇区是否为纯文本，纯文本会返回1
 int CheckSector(unsigned char* buffer) {
 	int res = 0;
 	for (int i = 0; i < SECTOR_SIZE; i++) {
@@ -25,7 +27,7 @@ int CheckSector(unsigned char* buffer) {
 	return res;
 }
 
-//输入文件指针，缓冲区基地址，输出路径
+//输入文件指针，缓冲区基地址，输出路径，会在usedSector中更新已经找到的扇区
 void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath, set<int>& usedSector) {
 	int curSector = 0;//当前读取扇区号
 	int State = 0;//0：不是html段且不含未完成文件；1：是html段
@@ -33,10 +35,11 @@ void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath, set<int>&
 	int curLoc = -1;//指向缓冲区中当前有效html文件的最末端
 	int cnt = 0;//找到的文件个数
 	int cntWind = 0, cntEnd = 0;//出现文件缠绕时，缠绕个数和结束的文件个数
-	char FileName[200];
-	int SectorNum = CalculateFileSize(fp) / SECTOR_SIZE;
+	char FileName[200];//输出文件名
+	int SectorNum = CalculateFileSize(fp) / SECTOR_SIZE;//扇区个数
 	int StartSector;//输出文件用
 
+	//遍历扇区寻找html文件，重点关注文件头和尾，根据找到的头和尾转移状态
 	for (curSector = 0; curSector < SectorNum; curSector++) {
 		if (State == 0) {
 			ReadSector(fp, curSector, buffer);
@@ -109,8 +112,9 @@ void FindHtml(FILE* fp, unsigned char* buffer, const char* OutputPath, set<int>&
 	printf_s("已成功恢复%d个可能的html文件\n", cnt);
 }
 
+//输入文件指针，缓冲区基地址，输出路径
 void FindText(FILE* fp, unsigned char* buffer, const char* OutputPath) {
-	set<int> usedSector;
+	set<int> usedSector;//记录已经输出的扇区，再次寻找时跳过这些扇区
 	InitTextTable();
 	FindHtml(fp, buffer, OutputPath, usedSector);
 
@@ -119,10 +123,11 @@ void FindText(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 	int StartLoc = 0, EndLoc = 0;//txt段在缓冲区中的起始和结束
 	int curLoc = -1;//指向缓冲区中当前有效txt文件的最末端
 	int cnt = 0;//找到的文件个数
-	char FileName[200];
-	int SectorNum = CalculateFileSize(fp) / SECTOR_SIZE;
+	char FileName[200];//输出文件名
+	int SectorNum = CalculateFileSize(fp) / SECTOR_SIZE;//扇区个数
 	int StartSector;//输出文件用
 
+	//找到所有连续的文本文件片段并输出
 	for (curSector = 0; curSector < SectorNum; curSector++) {
 		if (usedSector.find(curSector) != usedSector.end()) {
 			continue;
@@ -151,6 +156,7 @@ void FindText(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 				curLoc += SECTOR_SIZE;
 			}
 			else {
+				//设置“警报等级”，当该等级达到某一个定值说明文本段结束。
 				int WarningLevel = 1;
 				int fail = 0;
 				int LastLowLevel = curLoc;

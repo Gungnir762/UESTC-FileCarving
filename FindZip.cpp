@@ -1,14 +1,16 @@
 #include "FindZip.h"
 
+//输入文件指针，缓冲区基地址，文件输出的绝对路径
 void FindContinueZip(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 	int curSector = 0;//当前读取扇区号
 	int State = 0;//0：不是zip段且不含未完成文件；1：是zip段
 	int EndLoc = 0;//zip文件在缓冲区中的结束
 	int cnt = 0;//找到的文件个数
-	char FileName[200];
-	int SectorNum = CalculateFileSize(fp) / SECTOR_SIZE;
+	char FileName[200];//输出文件名
+	int SectorNum = CalculateFileSize(fp) / SECTOR_SIZE;//扇区个数
 
 	while (curSector < SectorNum) {
+		//寻找zip文件头，并验证合法性
 		ReadSector(fp, curSector, buffer);
 		if (!CheckHeader(buffer)) {
 			curSector++;
@@ -16,6 +18,7 @@ void FindContinueZip(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 		}
 		sprintf_s(FileName, "%s\\%08d.zip", OutputPath, curSector);
 
+		//寻找zip文件尾
 		int FileOffset = curSector * SECTOR_SIZE;
 		int len = 0;
 		int EnderLength;
@@ -40,6 +43,8 @@ void FindContinueZip(FILE* fp, unsigned char* buffer, const char* OutputPath) {
 	return;
 }
 
+//检查一个zip记录的文件头是否合法，若合法则返回该文件头的长度，否则返回0
+//输入指向文件头起始处的指针
 int CheckHeader(unsigned char* buffer) {
 	unsigned char signature[5] = "\x50\x4B\x03\x04";
 	for (int i = 0; i < 4; i++) {
@@ -56,6 +61,8 @@ int CheckHeader(unsigned char* buffer) {
 	return 30 + FileNameLength + ExtraFieldLength;
 }
 
+//检查一个zip文件的文件尾是否合法，若合法则返回文件尾的长度，否则返回0
+//输入指向文件头起始处的指针
 int CheckEnder(unsigned char* buffer) {
 	unsigned char signature[5] = "\x50\x4B\x05\x06";
 	for (int i = 0; i < 4; i++) {
