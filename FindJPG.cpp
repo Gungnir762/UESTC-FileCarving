@@ -1,4 +1,13 @@
-﻿#include <cstdint>
+﻿/*
+author:zyr
+function:jpeg文件恢复的函数定义文件
+notice:jump2SOS()可能存在一些bug。
+若屏蔽此函数，可恢复的文件有：2d,3b,1b,3c,3g2,3i
+若使用此函数，可恢复的文件有：3a,2d,3b,1b,3g2,3i
+相比之下少了3c，多了3a
+*/
+
+#include <cstdint>
 #include<set>
 #include"FindJPG.h"
 #include"BasicFunction.h"
@@ -12,6 +21,7 @@ uint16_t read2Bytes(uint8_t* buffer, unsigned offset)
 	return value;
 }
 
+//寻找JFIF文件头
 bool JFIF_head_found(uint8_t* buffer)
 {
 	if (read2Bytes(buffer, 0) == SOI && read2Bytes(buffer, 2) == APP0)
@@ -26,6 +36,7 @@ bool EXIF_head_found(uint8_t* buffer)
 	return false;
 }
 
+//判断num是否在set中
 bool in_set(const std::set<uint16_t>& set, uint16_t num)
 {
 	return set.find(num) != set.end();
@@ -111,7 +122,7 @@ void rebuild_JPG(FILE* fp, uint8_t* buffer, const char* output_path)
 		if (JFIF_head_found(temp_sector)) {
 			printf_s("JFIF begin at sector: %d\n", curSector);
 
-			unsigned int SOS_begin = jump2SOS(fp, curSector, SectorNum);//curSector;//
+			unsigned int SOS_begin = jump2SOS(fp, curSector, SectorNum);//= curSector;//
 
 			unsigned int jpg_end_sector = get_JPG_end(fp, SOS_begin, SectorNum, &end_offset);
 			if (jpg_end_sector == -1)
@@ -120,7 +131,7 @@ void rebuild_JPG(FILE* fp, uint8_t* buffer, const char* output_path)
 			{
 				fseek(fp, curSector * SECTOR_SIZE, SEEK_SET);
 				fread(buffer, sizeof(uint8_t), (jpg_end_sector - curSector) * SECTOR_SIZE + end_offset, fp);
-				sprintf_s(fileName, "%s\\%08d.jpg", output_path, curSector);
+				sprintf_s(fileName, "%s\\%08d.jpg", output_path, curSector);//以起始扇区号为文件名
 				OutputFile(fileName, buffer, 0, (jpg_end_sector - curSector) * SECTOR_SIZE + end_offset);
 				fseek(fp, 0, SEEK_SET);
 			}

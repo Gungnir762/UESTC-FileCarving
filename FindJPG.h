@@ -1,4 +1,9 @@
-﻿#pragma once
+﻿/*
+author:zyr
+function:jpeg文件恢复的相关头文件，定义了一些常量
+notice:
+*/
+#pragma once
 #include<stdio.h>
 #include<iostream>
 
@@ -40,4 +45,8 @@ using namespace std;
 
 typedef uint16_t WORD;
 
-void rebuild_JPG(FILE* fp, unsigned char* buffer, const char* OutputPath);
+/*
+输入参数：文件指针，缓冲区，输出路径
+功能：在对文件中可能的jpeg文件进行恢复后，将数据写入到输出路径中
+*/
+void rebuild_JPG(FILE* fp, uint8_t* buffer, const char* OutputPath);

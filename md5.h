@@ -1,4 +1,5 @@
 ﻿/**
+引用了md5计算的开源代码
  * @file md5.h
  * @The header file of md5.
  * @author Jiewei Wei
