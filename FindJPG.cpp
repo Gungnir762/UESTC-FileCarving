@@ -2,10 +2,9 @@
 #include<set>
 #include"FindJPG.h"
 #include"BasicFunction.h"
-#include"huffmanTree.h"
 
 //从buffer中的offset开始读取2字节数据
-uint16_t read2Bytes(unsigned char* buffer, unsigned offset)
+uint16_t read2Bytes(uint8_t* buffer, unsigned offset)
 {
 	uint16_t value = 0;
 	value |= buffer[offset] << 8;
@@ -13,196 +12,125 @@ uint16_t read2Bytes(unsigned char* buffer, unsigned offset)
 	return value;
 }
 
-
-bool JFIF_head_found(unsigned char* buffer)
+bool JFIF_head_found(uint8_t* buffer)
 {
 	if (read2Bytes(buffer, 0) == SOI && read2Bytes(buffer, 2) == APP0)
 		return true;
 	return false;
 }
 
-bool EXIF_head_found(unsigned char* buffer)
+bool EXIF_head_found(uint8_t* buffer)
 {
 	if (read2Bytes(buffer, 0) == SOI && read2Bytes(buffer, 2) == APP1)
 		return true;
 	return false;
 }
 
-static const char* huffman2binary_str(int huffman_code, int n_bits, char buf[64]) {
-	int mask = 1 << (n_bits - 1);
-	for (int i = 0; i < n_bits; i++) {
-		if (huffman_code & mask) {
-			buf[i] = '1';
-		}
-		else {
-			buf[i] = '0';
-		}
-		mask >>= 1;
-	}
-	buf[n_bits] = 0;
-	return buf;
-}
-
-//从sector_begin开始找第一个FFC4，返回一个包含所有哈夫曼编码的集合
-set<string> get_huffmanCode_set(FILE* fp, unsigned int sector_begin, unsigned int* max_huffman_code_len)
-{
-	static unsigned char* tmp = (unsigned char*)malloc(SECTOR_SIZE * sizeof(unsigned char));
-	set<string> huffman_code_set;
-	*max_huffman_code_len = 0;
-	for (unsigned int begin = sector_begin; begin < sector_begin + 5; begin++)//DHT可能在文件头之后1个扇区
-	{
-		ReadSector(fp, begin, tmp);
-		for (int offset = 0; offset < SECTOR_SIZE - 1; offset++)
-		{
-			if (read2Bytes(tmp, offset) == DHT)
-			{
-				const unsigned char* numbers = tmp + offset + 5;
-				const unsigned char* symbols = numbers + 16;
-
-				char buf[64];
-				int huffman_code = 0;
-				for (int i = 0; i < 16; i++) {
-					int num = numbers[i];
-					int n_bits = i + 1;
-
-					for (int j = 0; j < num; j++) {
-						int symbol = *symbols;
-						if (n_bits > *max_huffman_code_len)
-							*max_huffman_code_len = n_bits;
-
-						printf("0x%0.2x | %s\n", symbol, huffman2binary_str(huffman_code, n_bits, buf));
-						huffman_code_set.insert(huffman2binary_str(huffman_code, n_bits, buf));
-
-						huffman_code++;
-						symbols++;
-					}
-					huffman_code <<= 1;
-				}
-				return huffman_code_set;
-			}
-		}
-	}
-	return huffman_code_set;
-}
-
-//set<string> create_huffman_lookup_table(set<string> huffman_code_set, unsigned int max_huffman_code_len) {
-//	set<string> huffman_look_up_table;
-//	for (auto code : huffman_code_set) {
-//		while (code.length() < max_huffman_code_len) {
-//			code = "0" + code;
-//		}
-//		huffman_look_up_table.insert(code);
-//	}
-//	return huffman_look_up_table;
-//}
-
-uint16_t string2bin(string* s)
-{
-	uint16_t n = 0;
-	for (int i = 0; i < (*s).size(); i++)
-	{
-		n <<= 1;
-		if ((*s)[i] == '1')
-			n |= 1;
-	}
-	return n;
-}
-
-set<uint16_t> create_huffman_lookup_table(set<string> huffman_code_set)
-{
-	set<uint16_t> huffman_look_up_table;
-	for (string code : huffman_code_set) {
-		huffman_look_up_table.insert(string2bin(&code));
-	}
-	return huffman_look_up_table;
-}
-
-bool is_in_set(const std::set<uint16_t>& set, uint16_t num)
+bool in_set(const std::set<uint16_t>& set, uint16_t num)
 {
 	return set.find(num) != set.end();
 }
-//
-//bool is_jpg_sector(unsigned char* buffer, unsigned int offset, set<uint16_t> huffman_look_up_table)
-//{
-//	int warning_level = 1;//判断是不是属于jpg的块，大于10则退出
-//	for (unsigned int offset_test = 0; offset_test < offset; ++offset_test)
-//	{
-//		if (is_in_set(huffman_look_up_table, read2Bytes(buffer, offset_test)) && warning_level != 1)
-//			warning_level--;
-//		else
-//			warning_level *= 2;
-//		if (warning_level > 10)
-//			return false;
-//	}
-//	return true;
-//}
-//从sector_begin开始一直往sector_end找,直到找到第一个0xFFD9，返回其所在的扇区号
-int get_JPG_end(FILE* fp, set<string> huffman_code_set, unsigned int sector_begin, unsigned int sector_end)
+
+//从sector_begin开始一直往sector_end找,跳转到第一个压缩数据区
+unsigned int jump2SOS(FILE* fp, unsigned int sector_begin, unsigned int sector_end)
 {
-	static unsigned char* temp = (unsigned char*)malloc(SECTOR_SIZE * sizeof(unsigned char));
+	static uint8_t* temp_sector = (uint8_t*)malloc(SECTOR_SIZE * sizeof(uint8_t));
+	set<uint16_t>key_set = { SOI,APP0,APP1,APP2,APP3,APP4,APP5,APP6,APP7,APP8,APP9,APP10,APP11,APP12,APP13,APP14,APP15,SOF0,SOF2,DHT,DQT,DRI,COM,EOI };
+	set<uint16_t> none_jump_set = { SOI,RST0,RST1,RST2,RST3,RST4,RST5,RST6,RST7,0xFF00,0xFFFF };
 
 	for (unsigned int i = sector_begin; i < sector_end; i++)
 	{
-		ReadSector(fp, i, temp);
-		for (unsigned int offset = 0; offset < SECTOR_SIZE - 1; ++offset) {
-
-			if (read2Bytes(temp, offset) == EOI)
+		ReadSector(fp, i, temp_sector);
+		for (unsigned int offset = 0; offset < SECTOR_SIZE - 1; ++offset)
+		{
+			uint16_t value = read2Bytes(temp_sector, offset);
+			if (value == SOS)
 			{
-				//if (is_jpg_sector(temp, offset, huffman_look_up_table))
-				if (is_jpg_sector(temp, huffman_code_set) == 1)
+				printf_s("SOS begin at sector: %d,offset = %d\n", i, offset);
+				return i;
+			}
+			else if (value == EOI)
+			{
+				continue;
+			}
+			else if (temp_sector[offset] == 0xFF && in_set(key_set, value) && !in_set(none_jump_set, value))
+			{
+				printf_s("for header: 0x%X in sector %d,offset=0x%X,", value, i, offset + (i - sector_begin) * SECTOR_SIZE);
+				unsigned int len = read2Bytes(temp_sector, offset + 2);////当前扫描到的数据区长度
+				printf_s("len = 0x%X\n", len);
+				//跳转后的偏移量
+				offset = (offset + len + 2) % SECTOR_SIZE;
+				if (len > SECTOR_SIZE - offset)//数据区长度大于该块剩余大小
 				{
-					printf_s("end at sector: %d\n", i);
-					return i;
+					//跳转块号（取模）
+					i = i  + (unsigned int)(len / SECTOR_SIZE);
+					break;
 				}
+			}
+		}
+	}
+	return sector_begin;
+}
 
+
+//从sector_begin开始一直往sector_end找,直到找到第一个0xFFD9，返回其所在的扇区号
+int get_JPG_end(FILE* fp, unsigned int sector_begin, unsigned int sector_end, unsigned int* end_offset)
+{
+	static uint8_t* temp_sector = (uint8_t*)malloc(SECTOR_SIZE * sizeof(uint8_t));
+
+	for (unsigned int curSector = sector_begin; curSector < sector_end; curSector++)
+	{
+		ReadSector(fp, curSector, temp_sector);
+		for (unsigned int offset = 0; offset < SECTOR_SIZE - 1; ++offset)
+		{
+			if (read2Bytes(temp_sector, offset) == EOI)
+			{
+				*end_offset = offset + 2;
+				printf_s("end at sector: %d,offset=%d\n", curSector, offset);
+				return curSector;
 			}
 		}
 	}
 	return -1;
 }
 
-int jump_to_sos(FILE* fp, unsigned int curSector, unsigned int SectorNum)
-{
-	int sos_begin_sector = 0;
-
-	return sos_begin_sector;
-}
-
-void rebuild_JPG(FILE* fp, unsigned char* buffer, const char* output_path)
+void rebuild_JPG(FILE* fp, uint8_t* buffer, const char* output_path)
 {
 	unsigned int curSector = 0;//当前读取扇区号
 	int cnt = 0;//找到的文件个数
 	char fileName[200];
-	set<string> huffman_code_set;//存储找到的哈夫曼编码
-	set<uint16_t> huffman_look_up_table;//哈夫曼编码查找表
+	unsigned int end_offset = 0;//FFD9在文件块内的偏移量
+	static uint8_t* temp_sector = (uint8_t*)malloc(SECTOR_SIZE * sizeof(uint8_t));
+
 	fseek(fp, 0, SEEK_END);
 	unsigned int SectorNum = ftell(fp) / SECTOR_SIZE;//总扇区数
 	fseek(fp, 0, SEEK_SET);
+
 	for (curSector = 0; curSector < SectorNum; curSector++) {
-		ReadSector(fp, curSector, buffer);
-		if (JFIF_head_found(buffer)) {
+		ReadSector(fp, curSector, temp_sector);
+		if (JFIF_head_found(temp_sector)) {
 			printf_s("JFIF begin at sector: %d\n", curSector);
-			unsigned int max_huffman_code_len = 0;
-			huffman_code_set = get_huffmanCode_set(fp, curSector, &max_huffman_code_len);
-			//从SOI之后开始，找到压缩数据的开头，避免FFD9的误伤
-			int sos_begin = jump_to_sos(fp, curSector, SectorNum);
-			/*for (auto it = huffman_look_up_table.begin(); it != huffman_look_up_table.end(); it++)
+
+			unsigned int SOS_begin = jump2SOS(fp, curSector, SectorNum);//curSector;//
+
+			unsigned int jpg_end_sector = get_JPG_end(fp, SOS_begin, SectorNum, &end_offset);
+			if (jpg_end_sector == -1)
+				printf_s("未找到文件尾\n");
+			else
 			{
-				cout << std::hex << *it << endl;
+				fseek(fp, curSector * SECTOR_SIZE, SEEK_SET);
+				fread(buffer, sizeof(uint8_t), (jpg_end_sector - curSector) * SECTOR_SIZE + end_offset, fp);
+				sprintf_s(fileName, "%s\\%08d.jpg", output_path, curSector);
+				OutputFile(fileName, buffer, 0, (jpg_end_sector - curSector) * SECTOR_SIZE + end_offset);
+				fseek(fp, 0, SEEK_SET);
 			}
 
-			printf("哈夫曼编码的最大长度为：%d\n", max_huffman_code_len);*/
-
-			int sector_end = get_JPG_end(fp, huffman_code_set, curSector, SectorNum);
-			if (sector_end == -1)
-				printf_s("未找到文件尾\n");
+			//调试
+			//return;
 		}
-		else if (EXIF_head_found(buffer)) {
+		else if (EXIF_head_found(temp_sector)) {
 			printf_s("EXIF begin at sector:%d\n", curSector);
 		}
-		else {
-		}
-		huffman_code_set.clear();
 	}
 }
 

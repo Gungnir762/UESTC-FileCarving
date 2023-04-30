@@ -1,5 +1,15 @@
 #include"BasicFunction.h"
 
+void printf_error(const char* s)
+{
+	printf("\033[0m\033[1;31m%s\033[0m", s);
+}
+
+void printf_success(const char* s)
+{
+	printf("\033[0m\033[1;32m%s\033[0m", s);
+}
+
 void ReadSectorError(unsigned char* buffer)
 {
 	for (int i = 0; i < SECTOR_SIZE; i++) {
@@ -26,22 +36,24 @@ void ReadSector(FILE* file, unsigned int sector, unsigned char* buffer)
 void OutputFile(const char* filename, unsigned char* buffer, unsigned int begin, unsigned int offset)
 {
 	FILE* fp = NULL;
+	printf_s("building file:%s\n", filename);
 	if (begin + offset > MAX_SIZE) {
-		printf_s("Òç³ö\n");
+		printf_error("\noffset overflow\n");
 		return;
 	}
 	if (fopen_s(&fp, filename, "wb+")) {
-		printf_s("Î´³É¹¦´´½¨ÎÄ¼þ\n");
+		printf_error("\nfilename unsuitable or this file is using by another process\n");
 		return;
 	}
-	for (int i = 0; i < offset; i++) {
+	for (unsigned int i = 0; i < offset; i++) {
 		if (fputc((int)buffer[begin + i], fp) == EOF) {
-			printf_s("Ð´ÎÄ¼þÊ±´íÎó\n");
+			printf_error("\nwrite file error\n");
 			fclose(fp);
 			return;
 		}
 	}
 	fclose(fp);
+	printf_success("\nbuild file complete\n");
 	return;
 }
 
@@ -56,8 +68,8 @@ int CalculateFileSize(FILE* fp)
 
 int ReadFileUntil(const unsigned char* keyword, int len, FILE* fp, unsigned char* buffer)
 {
-	int cnt = 0;//¶ÁÈ¡×Ö½ÚÊý
-	int flag = 0;//ÊÇ·ñÕÒµ½¹Ø¼ü´Ê±êÊ¶
+	int cnt = 0;//è¯»å–å­—èŠ‚æ•°
+	int flag = 0;//æ˜¯å¦æ‰¾åˆ°å…³é”®è¯æ ‡è¯†
 	while (true) {
 		int tmp = fgetc(fp);
 		if (tmp == EOF) {
