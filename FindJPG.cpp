@@ -133,6 +133,7 @@ void rebuild_JPG(FILE* fp, uint8_t* buffer, const char* output_path)
 				fread(buffer, sizeof(uint8_t), (jpg_end_sector - curSector) * SECTOR_SIZE + end_offset, fp);
 				sprintf_s(fileName, "%s\\%08d.jpg", output_path, curSector);//以起始扇区号为文件名
 				OutputFile(fileName, buffer, 0, (jpg_end_sector - curSector) * SECTOR_SIZE + end_offset);
+				cnt++;
 				fseek(fp, 0, SEEK_SET);
 			}
 
@@ -143,6 +144,7 @@ void rebuild_JPG(FILE* fp, uint8_t* buffer, const char* output_path)
 			printf_s("EXIF begin at sector:%d\n", curSector);
 		}
 	}
+	printf_s("共找到%d个文件\n", cnt);
 }
 
 

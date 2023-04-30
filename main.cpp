@@ -5,6 +5,7 @@
 #include "BasicFunction.h"
 #include "FindText.h"
 #include"FindJPG.h"
+#include"FindZip.h"
 #include "md5.h"
 
 
@@ -15,9 +16,12 @@ int main()
 	char fileName[] = "E:\\1_Temp\\challenges\\dfrws-2006-challenge.raw";
 	char savePath[] = "E:\\1_Temp\\challenges\\MyOutput";
 	FILE* fp;
+	set<int> usedSector;
 	fopen_s(&fp, fileName, "rb");
 	//FindText(fp, buffer, savePath);
 	rebuild_JPG(fp, buffer, savePath);
+	//FindHtml(fp, buffer, savePath, usedSector);
+	//FindContinueZip(fp, buffer, savePath);
 	printf_s("执行完成！");
 	return 0;
 }

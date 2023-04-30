@@ -6,11 +6,13 @@
 #define SECTOR_SIZE 512
 #define MAX_SIZE 50*1024*1024
 
+//打印红色错误信息
+void printf_error(const char* s);
+//打印绿色成功信息
+void printf_success(const char* s);
+
 //输入参数为File*文件指针,unsigned int 扇区号，返回为unsigned char*,错误时全填0F
 void ReadSector(FILE* file, unsigned int sector, unsigned char* buffer);
-
-//BGC算法
-void BGC(FILE* file, unsigned int sector, unsigned char* buffer);
 
 //输入参数为char*文件名,unsigned char*缓冲区，unsigned int 缓冲区中文件起始地址，unsigned int 偏移量
 void OutputFile(const char* filename, unsigned char* buffer, unsigned int begin, unsigned int offset);
