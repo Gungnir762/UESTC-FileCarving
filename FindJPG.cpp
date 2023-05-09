@@ -4,7 +4,7 @@ function:jpeg文件恢复的函数定义文件
 notice:jump2SOS()可能存在一些bug。
 若屏蔽此函数，可恢复的文件有：2d,3b,1b,3c,3g2,3i
 若使用此函数，可恢复的文件有：3a,2d,3b,1b,3g2,3i
-相比之下少了3c，多了3a
+相比之下少了3c(哈希值不同，但文件可以读取），多了3a
 */
 
 #include <cstdint>
@@ -47,8 +47,9 @@ unsigned int jump2SOS(FILE* fp, unsigned int sector_begin, unsigned int sector_e
 {
 	static uint8_t* temp_sector = (uint8_t*)malloc(SECTOR_SIZE * sizeof(uint8_t));
 	set<uint16_t>key_set = { SOI,APP0,APP1,APP2,APP3,APP4,APP5,APP6,APP7,APP8,APP9,APP10,APP11,APP12,APP13,APP14,APP15,SOF0,SOF2,DHT,DQT,DRI,COM,EOI };
+	//遇到这些不会进行跳转
 	set<uint16_t> none_jump_set = { SOI,RST0,RST1,RST2,RST3,RST4,RST5,RST6,RST7,0xFF00,0xFFFF };
-
+	//遍历所有块
 	for (unsigned int i = sector_begin; i < sector_end; i++)
 	{
 		ReadSector(fp, i, temp_sector);
